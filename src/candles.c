@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 
 #include "times_and_trades.h"
@@ -19,6 +20,10 @@ struct Candles {
     float low;
     float close;
     double real_volume;
+    float daily_low_up_to_current_candle;
+    float daily_high_up_to_current_candle;
+    float sma;
+    float ema;
     Candle_Color color;
     int structure;
     size_t size;
@@ -44,6 +49,26 @@ float get_low(Candles *candles, int pos) {
 
 float get_close(Candles *candles, int pos) {
     return candles[pos].close;
+}
+
+double get_real_volume(Candles *candles, int pos) {
+    return candles[pos].real_volume;
+}
+
+float get_daily_low_up_to_current_candle(Candles *candles, int pos) {
+    return candles[pos].daily_low_up_to_current_candle;
+}
+
+float get_daily_high_up_to_current_candle(Candles *candles, int pos) {
+    return candles[pos].daily_high_up_to_current_candle;
+}
+
+Candle_Color get_color(Candles *candles, int pos) {
+    return candles[pos].color;
+}
+
+int get_structure(Candles *candles, int pos) {
+    return candles[pos].structure;
 }
 
 Datetime get_candle_times_and_trades_datetime(Candles *candles, int pos, int row) {
@@ -91,7 +116,7 @@ int calculate_structure(Candles *candles, int pos, int lookback) {
     return 0;
 }
 
-Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
+Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, float *prev_ema, float **prev_closes, int *prev_close_count, int sma_period, int ema_period) {
     time_t current_interval_start = 0;
 
     int initial_capacity = 1024;
@@ -111,6 +136,8 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
     int high = 0;
     int low = 0;
     int close = 0;
+    int daily_low_up_to_current_candle = (int)1e9;
+    int daily_high_up_to_current_candle = (int)-1e9;
 
     int rows = __get_times_and_trades_size(times_and_trades);
 
@@ -137,6 +164,8 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
                 candles[j].close = (float)close / 10.0;
                 candles[j].color = (open > close ? RED : open < close ? GREEN : DOJI);
                 candles[j].candle_times_and_trades = malloc(count * sizeof(Candle_Times_And_Trades));
+                candles[j].daily_high_up_to_current_candle = (float)daily_high_up_to_current_candle / 10.0;
+                candles[j].daily_low_up_to_current_candle = (float)daily_low_up_to_current_candle / 10.0;
 
                 for (int k = 0; k < count; k++) {
                     candles[j].candle_times_and_trades[k].datetime = get_times_and_trades_datetime(times_and_trades, i - count + k);
@@ -145,6 +174,14 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
                 }
 
                 candles[j].candle_times_and_trades_rows = count;
+
+                if (high > daily_high_up_to_current_candle) {
+                    daily_high_up_to_current_candle = high;
+                }
+                if (low < daily_low_up_to_current_candle) {
+                    daily_low_up_to_current_candle = low;
+                }
+
                 j++;
             }
             current_interval_start = interval_start;
@@ -184,6 +221,8 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
         candles[j].low = (float)low / 10.0;
         candles[j].close = (float)close / 10.0;
         candles[j].color = (open > close ? RED : open < close ? GREEN : DOJI);
+        candles[j].daily_low_up_to_current_candle = 0;
+        candles[j].daily_high_up_to_current_candle = 0;
 
         candles[j].candle_times_and_trades = malloc(count * sizeof(Candle_Times_And_Trades));
 
@@ -205,6 +244,40 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
         candles[k].structure = calculate_structure(candles, k, LOOKBACK);
     }
 
+    float alpha = 2.0 / (ema_period + 1);
+
+    for (int k = 0; k < j; k++) {
+        float current_close = candles[k].close;
+
+        if (k == 0 && *prev_ema == 0) {
+            candles[k].ema = current_close;
+        } else {
+            candles[k].ema = current_close * alpha + *prev_ema * (1 - alpha);
+        }
+
+        *prev_ema = candles[k].ema;
+
+        if (*prev_close_count >= sma_period) {
+            memmove(*prev_closes, *prev_closes + 1, (sma_period - 1) * sizeof(float));
+            (*prev_closes)[sma_period - 1] = current_close;
+        } else {
+            (*prev_closes)[*prev_close_count] = current_close;
+            (*prev_close_count)++;
+        }
+
+        if (*prev_close_count >= sma_period) {
+            float sum = 0;
+
+            for (int i = 0; i < sma_period; i++) {
+                sum += (*prev_closes)[i];
+            }
+
+            candles[k].sma = sum / sma_period;
+        } else {
+            candles[k].sma = 0;
+        }
+    }
+
     return candles;
 }
 
@@ -224,9 +297,9 @@ void __free_candles(Candles *candles) {
 }
 
 void __print_candles(Candles *candles) {
-    printf("Datetime\tOpen\tHigh\tLow\tClose\tStructure\n");
+    printf("Datetime\tOpen\tHigh\tLow\tClose\tStructure\tDailyHigh\tDailyLow\tSMA\tEMA\n");
     for (size_t i = 0; i < candles->size; i++) {
-        printf("%02d/%02d/%02d %02d:%02d:%02d\t%.1f\t%.1f\t%.1f\t%.1f\t%d\n",
+        printf("%02d/%02d/%02d %02d:%02d:%02d\t%.1f\t%.1f\t%.1f\t%.1f\t%d\t%.1f\t%.1f\t%.1f\t%.1f\n",
             candles[i].datetime.year,
             candles[i].datetime.month,
             candles[i].datetime.day,
@@ -237,7 +310,11 @@ void __print_candles(Candles *candles) {
             candles[i].high,
             candles[i].low,
             candles[i].close,
-            candles[i].structure
+            candles[i].structure,
+            candles[i].daily_high_up_to_current_candle,
+            candles[i].daily_low_up_to_current_candle,
+            candles[i].sma,
+            candles[i].ema
         );
     }
 }
