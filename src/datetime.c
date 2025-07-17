@@ -1,4 +1,10 @@
+#include <stdio.h>
+
 #include "datetime.h"
+
+void __print_datetime(Datetime dt) {
+    printf("%02d/%02d/%02d %02d:%02d:%02d.%d\n", dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.millisecond);
+}
 
 time_t timestamp_to_unix(Datetime dt) {
     struct tm tm = {

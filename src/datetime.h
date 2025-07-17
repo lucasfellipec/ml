@@ -23,4 +23,6 @@ typedef struct {
 time_t timestamp_to_unix(Datetime dt);
 Datetime time_to_timestamp(time_t t);
 
+void __print_datetime(Datetime dt);
+
 #endif // DATETIME_H_

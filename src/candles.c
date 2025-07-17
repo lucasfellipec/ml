@@ -26,6 +26,34 @@ struct Candles {
     size_t candle_times_and_trades_rows;
 };
 
+Datetime get_candle_datetime(Candles *candles, int pos) {
+    return candles[pos].datetime;
+}
+
+float get_open(Candles *candles, int pos) {
+    return candles[pos].open;
+}
+
+float get_high(Candles *candles, int pos) {
+    return candles[pos].high;
+}
+
+float get_low(Candles *candles, int pos) {
+    return candles[pos].low;
+}
+
+float get_close(Candles *candles, int pos) {
+    return candles[pos].close;
+}
+
+Datetime get_candle_times_and_trades_datetime(Candles *candles, int pos, int row) {
+    return candles[pos].candle_times_and_trades[row].datetime;
+}
+
+float get_price_from_times_and_trades(Candles *candles, int pos, int row) {
+    return candles[pos].candle_times_and_trades[row].price;
+}
+
 int calculate_structure(Candles *candles, int pos, int lookback) {
     if (pos < lookback - 1) {
         return 0;
@@ -87,7 +115,7 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
     int rows = __get_times_and_trades_size(times_and_trades);
 
     for (int i = 0; i < rows; i++) {
-        time_t row_time = timestamp_to_unix(get_datetime(times_and_trades, i));
+        time_t row_time = timestamp_to_unix(get_times_and_trades_datetime(times_and_trades, i));
         time_t interval_start = (row_time / timeframe) * timeframe;
 
         if (interval_start != current_interval_start) {
@@ -111,8 +139,8 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
                 candles[j].candle_times_and_trades = malloc(count * sizeof(Candle_Times_And_Trades));
 
                 for (int k = 0; k < count; k++) {
-                    candles[j].candle_times_and_trades[k].datetime = get_datetime(times_and_trades, i - count + k);
-                    candles[j].candle_times_and_trades[k].price = get_price(times_and_trades, i - count + k);
+                    candles[j].candle_times_and_trades[k].datetime = get_times_and_trades_datetime(times_and_trades, i - count + k);
+                    candles[j].candle_times_and_trades[k].price = get_times_and_trades_price(times_and_trades, i - count + k);
                     candles[j].candle_times_and_trades[k].pos = k;
                 }
 
@@ -120,13 +148,13 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
                 j++;
             }
             current_interval_start = interval_start;
-            price = (int)(get_price(times_and_trades, i) * 10);
+            price = (int)(get_times_and_trades_price(times_and_trades, i) * 10);
             open = price;
             high = (int)-1e9;
             low = (int)1e9;
             count = 0;
         }
-        price = (int)(get_price(times_and_trades, i) * 10);
+        price = (int)(get_times_and_trades_price(times_and_trades, i) * 10);
 
         if (price > high) {
             high = price;
@@ -160,8 +188,8 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
         candles[j].candle_times_and_trades = malloc(count * sizeof(Candle_Times_And_Trades));
 
         for (int k = 0; k < count; k++) {
-            candles[j].candle_times_and_trades[k].datetime = get_datetime(times_and_trades, rows - count + k);
-            candles[j].candle_times_and_trades[k].price = get_price(times_and_trades, rows - count + k);
+            candles[j].candle_times_and_trades[k].datetime = get_times_and_trades_datetime(times_and_trades, rows - count + k);
+            candles[j].candle_times_and_trades[k].price = get_times_and_trades_price(times_and_trades, rows - count + k);
             candles[j].candle_times_and_trades[k].pos = k;
         }
 
@@ -182,6 +210,10 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe) {
 
 size_t __get_candles_size(Candles *candles) {
     return candles->size;
+}
+
+size_t __get_candle_times_and_trades_size(Candles *candles, int pos) {
+    return candles[pos].candle_times_and_trades_rows;
 }
 
 void __free_candles(Candles *candles) {

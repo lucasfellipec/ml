@@ -115,11 +115,11 @@ Times_And_Trades *read_times_and_trades(const char *filename) {
     return times_and_trades;
 }
 
-float get_price(Times_And_Trades *times_and_trades, int pos) {
+float get_times_and_trades_price(Times_And_Trades *times_and_trades, int pos) {
     return times_and_trades[pos].price;
 }
 
-Datetime get_datetime(Times_And_Trades *times_and_trades, int pos) {
+Datetime get_times_and_trades_datetime(Times_And_Trades *times_and_trades, int pos) {
     return times_and_trades[pos].datetime;
 }
 
