@@ -5,6 +5,6 @@
 
 typedef struct Strategy Strategy;
 
-void strategy(Candles *candles);
+void strategy(Candle *candles);
 
 #endif // STRATEGY_H_

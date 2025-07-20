@@ -11,7 +11,6 @@ struct Times_And_Trades {
     double real_volume;
     float volume;
     char agg;
-    int flag;
     size_t size;
 };
 
@@ -46,7 +45,7 @@ Times_And_Trades *read_times_and_trades(const char *filename) {
     int capacity = initial_capacity;
 
     while (fgets(line_buffer, sizeof(line_buffer), file)) {
-        char *cols[7];
+        char *cols[5];
         int col = 0;
         char *start = line_buffer;
         cols[0] = start;
@@ -70,42 +69,30 @@ Times_And_Trades *read_times_and_trades(const char *filename) {
         if (sscanf(cols[1], "%d:%d:%d.%d", &dt.hour, &dt.minute, &dt.second, &dt.millisecond) != 4) {
             continue;
         }
-        if (!strcmp(cols[4], "")) {
-            continue;
+
+        float last = atof(cols[2]);
+        float volume = atof(cols[3]);
+        char *flag = cols[4];
+
+        if (rows == capacity) {
+            capacity *= 2;
+            Times_And_Trades *temp = realloc(times_and_trades, capacity * sizeof(Times_And_Trades));
+            if (!temp) {
+                fprintf(stderr, "Error allocating memory\n");
+                free(times_and_trades);
+                fclose(file);
+                return NULL;
+            }
+            times_and_trades = temp;
         }
 
-        float last = atof(cols[4]);
-        float volume = atof(cols[5]);
-        int flag = atoi(cols[6]);
+        times_and_trades[rows].datetime = dt;
+        times_and_trades[rows].price = last;
+        times_and_trades[rows].volume = volume;
+        times_and_trades[rows].real_volume = (double)volume * last;
+        times_and_trades[rows].agg = flag[0];
 
-        if (!((flag & 32) && (flag & 64))) {
-            if (rows == capacity) {
-                capacity *= 2;
-                Times_And_Trades *temp = realloc(times_and_trades, capacity * sizeof(Times_And_Trades));
-                if (!temp) {
-                    fprintf(stderr, "Error allocating memory\n");
-                    free(times_and_trades);
-                    fclose(file);
-                    return NULL;
-                }
-                times_and_trades = temp;
-            }
-
-            times_and_trades[rows].datetime = dt;
-            times_and_trades[rows].price = last;
-            times_and_trades[rows].volume = volume;
-            times_and_trades[rows].real_volume = (double)volume * last;
-            times_and_trades[rows].flag = flag;
-
-            if (flag & 32) {
-                times_and_trades[rows].agg = 'C';
-            }
-            if (flag & 64) {
-                times_and_trades[rows].agg = 'V';
-            }
-
-            ++rows;
-        }
+        ++rows;
     }
 
     fclose(file);
@@ -117,6 +104,14 @@ Times_And_Trades *read_times_and_trades(const char *filename) {
 
 float get_times_and_trades_price(Times_And_Trades *times_and_trades, int pos) {
     return times_and_trades[pos].price;
+}
+
+float get_times_and_trades_volume(Times_And_Trades *times_and_trades, int pos) {
+    return times_and_trades[pos].volume;
+}
+
+float get_times_and_trades_agg(Times_And_Trades *times_and_trades, int pos) {
+    return times_and_trades[pos].agg;
 }
 
 Datetime get_times_and_trades_datetime(Times_And_Trades *times_and_trades, int pos) {

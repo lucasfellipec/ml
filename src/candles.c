@@ -2,18 +2,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
-#include "times_and_trades.h"
 #include "candles.h"
 #include "datetime.h"
+#include "tape_reading.h"
+#include "times_and_trades.h"
 
 typedef struct {
     Datetime datetime;
     float price;
+    float volume;
     int pos;
 } Candle_Times_And_Trades;
 
-struct Candles {
+struct Candle {
     Datetime datetime;
     float open;
     float high;
@@ -29,57 +32,101 @@ struct Candles {
     size_t size;
     Candle_Times_And_Trades *candle_times_and_trades;
     size_t candle_times_and_trades_rows;
+    Tape_Reading *price_volumes;
+    size_t price_volumes_rows;
+    float total_agg_volume_buy;
+    float total_agg_volume_sell;
+    float agg_delta;
+    float avg_delta;
+    float avg_delta_per_agg;
+    float std_delta;
 };
 
-Datetime get_candle_datetime(Candles *candles, int pos) {
+Datetime get_candle_datetime(Candle *candles, int pos) {
     return candles[pos].datetime;
 }
 
-float get_open(Candles *candles, int pos) {
+float get_open(Candle *candles, int pos) {
     return candles[pos].open;
 }
 
-float get_high(Candles *candles, int pos) {
+float get_high(Candle *candles, int pos) {
     return candles[pos].high;
 }
 
-float get_low(Candles *candles, int pos) {
+float get_low(Candle *candles, int pos) {
     return candles[pos].low;
 }
 
-float get_close(Candles *candles, int pos) {
+float get_close(Candle *candles, int pos) {
     return candles[pos].close;
 }
 
-double get_real_volume(Candles *candles, int pos) {
+double get_real_volume(Candle *candles, int pos) {
     return candles[pos].real_volume;
 }
 
-float get_daily_low_up_to_current_candle(Candles *candles, int pos) {
+float get_daily_low_up_to_current_candle(Candle *candles, int pos) {
     return candles[pos].daily_low_up_to_current_candle;
 }
 
-float get_daily_high_up_to_current_candle(Candles *candles, int pos) {
+float get_daily_high_up_to_current_candle(Candle *candles, int pos) {
     return candles[pos].daily_high_up_to_current_candle;
 }
 
-Candle_Color get_color(Candles *candles, int pos) {
+Candle_Color get_color(Candle *candles, int pos) {
     return candles[pos].color;
 }
 
-int get_structure(Candles *candles, int pos) {
+int get_structure(Candle *candles, int pos) {
     return candles[pos].structure;
 }
 
-Datetime get_candle_times_and_trades_datetime(Candles *candles, int pos, int row) {
+float get_sma(Candle *candles, int pos) {
+    return candles[pos].sma;
+}
+
+float get_ema(Candle *candles, int pos) {
+    return candles[pos].ema;
+}
+
+Tape_Reading *get_price_volumes(Candle *candles, int pos) {
+    return candles[pos].price_volumes;
+}
+
+float get_total_agg_volume_buy(Candle *candles, int pos) {
+    return candles[pos].total_agg_volume_buy;
+}
+
+float get_total_agg_volume_sell(Candle *candles, int pos) {
+    return candles[pos].total_agg_volume_sell;
+}
+
+float get_agg_delta(Candle *candles, int pos) {
+    return candles[pos].agg_delta;
+}
+
+float get_avg_delta(Candle *candles, int pos) {
+    return candles[pos].avg_delta;
+}
+
+float get_std_delta(Candle *candles, int pos) {
+    return candles[pos].std_delta;
+}
+
+Datetime get_candle_times_and_trades_datetime(Candle *candles, int pos, int row) {
     return candles[pos].candle_times_and_trades[row].datetime;
 }
 
-float get_price_from_times_and_trades(Candles *candles, int pos, int row) {
+float get_price_from_times_and_trades(Candle *candles, int pos, int row) {
     return candles[pos].candle_times_and_trades[row].price;
 }
 
-int calculate_structure(Candles *candles, int pos, int lookback) {
+int get_candle_times_and_trades_row(Candle *candles, int pos, int row) {
+    return candles[pos].candle_times_and_trades[row].pos;
+}
+
+int calculate_structure(Candle *candles, int pos, int lookback) {
     if (pos < lookback - 1) {
         return 0;
     }
@@ -116,11 +163,11 @@ int calculate_structure(Candles *candles, int pos, int lookback) {
     return 0;
 }
 
-Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, float *prev_ema, float **prev_closes, int *prev_close_count, int sma_period, int ema_period) {
+Candle *generate_candles(Times_And_Trades *times_and_trades, int timeframe, float *prev_ema, float **prev_closes, int *prev_close_count, int sma_period, int ema_period) {
     time_t current_interval_start = 0;
 
     int initial_capacity = 1024;
-    Candles *candles = malloc(initial_capacity * sizeof(Candles));
+    Candle *candles = malloc(initial_capacity * sizeof(Candle));
 
     if (!candles) {
         fprintf(stderr, "Error allocating memory\n");
@@ -149,7 +196,7 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
             if (count > 0) {
                 if (j == capacity) {
                     capacity *= 2;
-                    Candles *tmp = realloc(candles, capacity * sizeof(Candles));
+                    Candle *tmp = realloc(candles, capacity * sizeof(Candle));
                     if (!tmp) {
                         fprintf(stderr, "Error allocating memory\n");
                         free(candles);
@@ -166,14 +213,66 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
                 candles[j].candle_times_and_trades = malloc(count * sizeof(Candle_Times_And_Trades));
                 candles[j].daily_high_up_to_current_candle = (float)daily_high_up_to_current_candle / 10.0;
                 candles[j].daily_low_up_to_current_candle = (float)daily_low_up_to_current_candle / 10.0;
+                candles[j].avg_delta = 0;
+                candles[j].avg_delta_per_agg = 0;
+                candles[j].std_delta = 0;
+
+                Tape_Reading *tr = malloc(count * sizeof(Tape_Reading));
+                size_t tr_count = 0;
+
+                float total_agg_volume_buy = 0;
+                float total_agg_volume_sell = 0;
 
                 for (int k = 0; k < count; k++) {
                     candles[j].candle_times_and_trades[k].datetime = get_times_and_trades_datetime(times_and_trades, i - count + k);
                     candles[j].candle_times_and_trades[k].price = get_times_and_trades_price(times_and_trades, i - count + k);
+                    candles[j].candle_times_and_trades[k].volume = get_times_and_trades_volume(times_and_trades, i - count + k);
                     candles[j].candle_times_and_trades[k].pos = k;
+
+                    float price = get_times_and_trades_price(times_and_trades, i - count + k);
+                    float volume = get_times_and_trades_volume(times_and_trades, i - count + k);
+                    float volume_buy = 0;
+                    float volume_sell = 0;
+                    char agg = get_times_and_trades_agg(times_and_trades, i - count + k);
+
+                    if (agg == 'C') {
+                        total_agg_volume_buy += volume;
+                        volume_buy = volume;
+                    }
+                    if (agg == 'V') {
+                        total_agg_volume_sell += volume;
+                        volume_sell = volume;
+                    }
+
+                    int found = 0;
+
+                    for (int m = 0; m < tr_count; m++) {
+                        if (fabs(tr[m].price - price) < 0.0001 && agg == 'C') {
+                            tr[m].volume_buy += volume_buy;
+                            found = 1;
+                            break;
+                        }
+                        if (fabs(tr[m].price - price) < 0.0001 && agg == 'V') {
+                            tr[m].volume_sell += volume_sell;
+                            found = 1;
+                            break;
+                        }
+                    }
+
+                    if (!found) {
+                        tr[tr_count].price = price;
+                        tr[tr_count].volume_buy = volume_buy;
+                        tr[tr_count].volume_sell = volume_sell;
+                        tr_count++;
+                    }
                 }
 
                 candles[j].candle_times_and_trades_rows = count;
+                candles[j].total_agg_volume_buy = total_agg_volume_buy;
+                candles[j].total_agg_volume_sell = total_agg_volume_sell;
+                candles[j].agg_delta = total_agg_volume_buy - total_agg_volume_sell;
+                candles[j].price_volumes = realloc(tr, tr_count * sizeof(Tape_Reading));
+                candles[j].price_volumes_rows = tr_count;
 
                 if (high > daily_high_up_to_current_candle) {
                     daily_high_up_to_current_candle = high;
@@ -181,6 +280,7 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
                 if (low < daily_low_up_to_current_candle) {
                     daily_low_up_to_current_candle = low;
                 }
+
 
                 j++;
             }
@@ -191,6 +291,7 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
             low = (int)1e9;
             count = 0;
         }
+
         price = (int)(get_times_and_trades_price(times_and_trades, i) * 10);
 
         if (price > high) {
@@ -207,7 +308,7 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
     if (count > 0) {
         if (j == capacity) {
             capacity *= 2;
-            Candles *tmp = realloc(candles, capacity * sizeof(Candles));
+            Candle *tmp = realloc(candles, capacity * sizeof(Candle));
             if (!tmp) {
                 fprintf(stderr, "Error allocating memory\n");
                 free(candles);
@@ -223,22 +324,70 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
         candles[j].color = (open > close ? RED : open < close ? GREEN : DOJI);
         candles[j].daily_low_up_to_current_candle = 0;
         candles[j].daily_high_up_to_current_candle = 0;
+        candles[j].avg_delta = 0;
+        candles[j].avg_delta_per_agg = 0;
+        candles[j].std_delta = 0;
 
         candles[j].candle_times_and_trades = malloc(count * sizeof(Candle_Times_And_Trades));
 
         for (int k = 0; k < count; k++) {
             candles[j].candle_times_and_trades[k].datetime = get_times_and_trades_datetime(times_and_trades, rows - count + k);
             candles[j].candle_times_and_trades[k].price = get_times_and_trades_price(times_and_trades, rows - count + k);
+            candles[j].candle_times_and_trades[k].volume = get_times_and_trades_volume(times_and_trades, rows - count + k);
             candles[j].candle_times_and_trades[k].pos = k;
         }
 
         candles[j].candle_times_and_trades_rows = count;
+        candles[j].price_volumes = NULL;
+        candles[j].price_volumes_rows = 0;
+
         j++;
     }
 
     candles->size = j;
 
-    const int LOOKBACK = 10;
+    const int LOOKBACK = 20;
+
+    for (int k = 1; k < j; k++) {
+        for (int x = 0; x < candles[k].price_volumes_rows; x++) {
+            float sum_volume_buy = 0;
+            float sum_volume_sell = 0;
+            candles[k].price_volumes[x].avg_volume_buy = 0;
+            candles[k].price_volumes[x].avg_volume_sell = 0;
+            float price = candles[k].price_volumes[x].price;
+            int count = 0;
+            for (int l = k - 1; l >= 0; l--) {
+                for (int y = 0; y < candles[l].price_volumes_rows; y++) {
+                    if (fabs(candles[l].price_volumes[y].price - price) < 0.0001) {
+                        sum_volume_buy += candles[l].price_volumes[y].volume_buy;
+                        sum_volume_sell += candles[l].price_volumes[y].volume_sell;
+                        count++;
+                    }
+                }
+            }
+            if (count > 0) {
+                candles[k].price_volumes[x].avg_volume_buy = sum_volume_buy / count;
+                candles[k].price_volumes[x].avg_volume_sell = sum_volume_sell / count;
+            }
+        }
+    }
+
+    for (int k = 1; k < j; k++) {
+        float sum_delta = 0;
+        float sum_delta_buy = 0;
+        float sum_delta_sell = 0;
+        float variance = 0;
+        for (int l = k - 1; l >= 0; l--) {
+            sum_delta += fabs(candles[l].agg_delta);
+        }
+        candles[k].avg_delta = sum_delta / k;
+        for (int l = k - 1; l >= 0; l--) {
+            float diff = candles[l].agg_delta - candles[k].avg_delta;
+            variance += diff * diff;
+        }
+        variance /= k;
+        candles[k].std_delta = sqrt(variance);
+    }
 
     for (int k = 0; k < j; k++) {
         candles[k].structure = calculate_structure(candles, k, LOOKBACK);
@@ -281,25 +430,26 @@ Candles *generate_candles(Times_And_Trades *times_and_trades, int timeframe, flo
     return candles;
 }
 
-size_t __get_candles_size(Candles *candles) {
+size_t __get_candles_size(Candle *candles) {
     return candles->size;
 }
 
-size_t __get_candle_times_and_trades_size(Candles *candles, int pos) {
+size_t __get_candle_times_and_trades_size(Candle *candles, int pos) {
     return candles[pos].candle_times_and_trades_rows;
 }
 
-void __free_candles(Candles *candles) {
+void __free_candles(Candle *candles) {
     for (size_t i = 0; i < candles->size; i++) {
         free(candles[i].candle_times_and_trades);
+        free(candles[i].price_volumes);
     }
     free(candles);
 }
 
-void __print_candles(Candles *candles) {
-    printf("Datetime\tOpen\tHigh\tLow\tClose\tStructure\tDailyHigh\tDailyLow\tSMA\tEMA\n");
+void __print_candles(Candle *candles) {
+    printf("Datetime\tOpen\tHigh\tLow\tClose\tStructure\tDailyHigh\tDailyLow\tSMA\tEMA\tTotal_Agg_Volume_Buy\tTotal_Agg_Volume_Sell\tAgg_Delta\tAvg_Delta\tStd_Delta\n");
     for (size_t i = 0; i < candles->size; i++) {
-        printf("%02d/%02d/%02d %02d:%02d:%02d\t%.1f\t%.1f\t%.1f\t%.1f\t%d\t%.1f\t%.1f\t%.1f\t%.1f\n",
+        printf("%02d/%02d/%02d %02d:%02d:%02d\t%.1f\t%.1f\t%.1f\t%.1f\t%d\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n",
             candles[i].datetime.year,
             candles[i].datetime.month,
             candles[i].datetime.day,
@@ -314,7 +464,21 @@ void __print_candles(Candles *candles) {
             candles[i].daily_high_up_to_current_candle,
             candles[i].daily_low_up_to_current_candle,
             candles[i].sma,
-            candles[i].ema
+            candles[i].ema,
+            candles[i].total_agg_volume_buy,
+            candles[i].total_agg_volume_sell,
+            candles[i].agg_delta,
+            candles[i].avg_delta,
+            candles[i].std_delta
         );
+        for (size_t j = 0; j < candles[i].price_volumes_rows; j++) {
+            printf("\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\n",
+                candles[i].price_volumes[j].price,
+                candles[i].price_volumes[j].volume_buy,
+                candles[i].price_volumes[j].volume_sell,
+                candles[i].price_volumes[j].avg_volume_buy,
+                candles[i].price_volumes[j].avg_volume_sell
+            );
+        }
     }
 }

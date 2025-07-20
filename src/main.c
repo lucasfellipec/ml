@@ -2,16 +2,15 @@
 #include <stdlib.h>
 
 #include "candles.h"
-#include "times_and_trades.h"
 #include "strategy.h"
+#include "times_and_trades.h"
 
 #define TIMEFRAME 300
 #define SMA_PERIOD 20
 #define EMA_PERIOD 9
 
 const char *files[] = {
-    "csv/WDO@D_202412020900_202412021829.csv",
-    "csv/WDO@D_202412030900_202412031829.csv"
+    "csv/TT_NEG_WDO_24_05_07-fixed.txt",
 };
 
 int main() {
@@ -31,7 +30,7 @@ int main() {
         const char *filename = files[i];
 
         Times_And_Trades* times_and_trades = read_times_and_trades(filename);
-        Candles *candles = generate_candles(times_and_trades, TIMEFRAME, &last_ema, &last_closes, &last_close_count, SMA_PERIOD, EMA_PERIOD);
+        Candle *candles = generate_candles(times_and_trades, TIMEFRAME, &last_ema, &last_closes, &last_close_count, SMA_PERIOD, EMA_PERIOD);
 
         __print_candles(candles);
 
