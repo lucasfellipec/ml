@@ -33,6 +33,8 @@ float get_total_agg_volume_sell(Candle *candles, int pos);
 float get_agg_delta(Candle *candles, int pos);
 float get_avg_delta(Candle *candles, int pos);
 float get_std_delta(Candle *candles, int pos);
+float get_avg_volume_buy(Candle *candles, int pos);
+float get_avg_volume_sell(Candle *candles, int pos);
 
 float get_price_from_times_and_trades(Candle *candles, int pos, int row);
 Datetime get_candle_times_and_trades_datetime(Candle *candles, int pos, int row);
@@ -42,5 +44,6 @@ size_t __get_candle_times_and_trades_size(Candle *candles, int pos);
 size_t __get_candles_size(Candle *candles);
 void __free_candles(Candle *candles);
 void __print_candles(Candle *candles);
+void __generate_footprint_csv(Candle *candles);
 
 #endif // CANDLES_H_

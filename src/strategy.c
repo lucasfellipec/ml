@@ -39,7 +39,6 @@ void strategy(Candle *candles) {
             for (size_t j = 0; j < __get_candle_times_and_trades_size(candles, i); j++) {
                 if (get_price_from_times_and_trades(candles, i, j) < entry_price) {
                     __print_datetime(get_candle_datetime(candles, i - 2));
-                    printf("Gatilho\n");
                     __print_datetime(get_candle_datetime(candles, i - 1));
                     __print_datetime(get_candle_times_and_trades_datetime(candles, i, j));
                     pos = get_candle_times_and_trades_row(candles, i, j);

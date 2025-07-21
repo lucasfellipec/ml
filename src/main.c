@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "candles.h"
-#include "strategy.h"
+// #include "strategy.h"
 #include "times_and_trades.h"
 
 #define TIMEFRAME 300
@@ -10,7 +10,7 @@
 #define EMA_PERIOD 9
 
 const char *files[] = {
-    "csv/TT_NEG_WDO_24_05_07-fixed.txt",
+    "csv/TT_NEG_WDO_24_06_21-fixed.txt",
 };
 
 int main() {
@@ -32,7 +32,8 @@ int main() {
         Times_And_Trades* times_and_trades = read_times_and_trades(filename);
         Candle *candles = generate_candles(times_and_trades, TIMEFRAME, &last_ema, &last_closes, &last_close_count, SMA_PERIOD, EMA_PERIOD);
 
-        __print_candles(candles);
+        // __print_candles(candles);
+        __generate_footprint_csv(candles);
 
         // strategy(candles);
 

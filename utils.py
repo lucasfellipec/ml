@@ -1,6 +1,6 @@
 import pandas as pd
 
-filename = "csv/TT_NEG_WDO_24_05_07"
+filename = "../csv/TT_NEG_WDO_24_06_21"
 split = filename.split("_")
 date = ""
 for s in split:
@@ -11,7 +11,7 @@ date = "20" + date[:-1]
 
 df = pd.read_csv(f"{filename}.txt", delimiter="\t", low_memory=False)
 df = df[::-1].reset_index(drop=True)
-df = df[df["Agressor"] != "Leilão"]
+# df = df[df["Agressor"] != "Leilão"]
 df["Date"] = date
 df["Valor"] = df["Valor"].str.replace(".", "", regex=False).str.replace(",", ".", regex=False).astype(float)
 
