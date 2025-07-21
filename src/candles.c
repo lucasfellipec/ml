@@ -625,23 +625,17 @@ void __generate_footprint_csv(Candle *candles) {
     }
     printf("\n");
     for (size_t i = 0; i < candles->size; i++) {
+        int buy = 0;
+        int sell = 0;
         if (candles[i].real_movement < candles[i].expected_movement
             && candles[i].buy_agg_per_displacement > candles[i - 1].avg_buy_agg_per_displacement
             && candles[i].delta_per_displacement > candles[i - 1].avg_delta_per_displacement
             && candles[i].agg_delta > 0) {
-            int found = 0;
             for (size_t j = 0; j < candles[i].price_volumes_rows; j++) {
                 if (candles[i].price_volumes[j].volume_buy > 3 * candles[i].avg_volume_buy) {
-                    found = 1;
+                    sell = 1;
                     break;
                 }
-            }
-            if (found) {
-                printf("V\t");
-                continue;
-            } else {
-                printf("-\t");
-                continue;
             }
         }
         if (candles[i].real_movement > candles[i].expected_movement
@@ -651,17 +645,15 @@ void __generate_footprint_csv(Candle *candles) {
             int found = 0;
             for (size_t j = 0; j < candles[i].price_volumes_rows; j++) {
                 if (candles[i].price_volumes[j].volume_sell > 3 * candles[i].avg_volume_sell) {
-                    found = 1;
+                    buy = 1;
                     break;
                 }
             }
-            if (found) {
-                printf("C\t");
-                continue;
-            } else {
-                printf("-\t");
-                continue;
-            }
+        }
+        if (sell) {
+            printf("V\t");
+        } else if (buy) {
+            printf("C\t");
         } else {
             printf("-\t");
         }
