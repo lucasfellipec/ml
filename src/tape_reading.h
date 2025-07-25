@@ -3,8 +3,8 @@
 
 typedef struct {
     float price;
-    float volume_buy;
-    float volume_sell;
+    float buy_volume;
+    float sell_volume;
     char agg;
 } Tape_Reading;
 

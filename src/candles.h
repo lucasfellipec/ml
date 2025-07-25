@@ -28,13 +28,15 @@ int get_structure(Candle *candles, int pos);
 float get_sma(Candle *candles, int pos);
 float get_ema(Candle *candles, int pos);
 Tape_Reading *get_price_volumes(Candle *candles, int pos);
-float get_total_agg_volume_buy(Candle *candles, int pos);
-float get_total_agg_volume_sell(Candle *candles, int pos);
-float get_agg_delta(Candle *candles, int pos);
-float get_avg_delta(Candle *candles, int pos);
-float get_std_delta(Candle *candles, int pos);
-float get_avg_volume_buy(Candle *candles, int pos);
-float get_avg_volume_sell(Candle *candles, int pos);
+float get_total_buy_agg_volume(Candle *candles, int pos);
+float get_total_sell_agg_volume(Candle *candles, int pos);
+float get_delta_agg(Candle *candles, int pos);
+float get_delta_avg(Candle *candles, int pos);
+float get_delta_std(Candle *candles, int pos);
+float get_buy_volume_avg(Candle *candles, int pos);
+float get_sell_volume_avg(Candle *candles, int pos);
+char get_trigger(Candle *candles, int pos);
+void generate_triggers(Candle *candles);
 
 float get_price_from_times_and_trades(Candle *candles, int pos, int row);
 Datetime get_candle_times_and_trades_datetime(Candle *candles, int pos, int row);
@@ -44,6 +46,6 @@ size_t __get_candle_times_and_trades_size(Candle *candles, int pos);
 size_t __get_candles_size(Candle *candles);
 void __free_candles(Candle *candles);
 void __print_candles(Candle *candles);
-void __generate_footprint_csv(Candle *candles);
+void __generate_footprint(Candle *candles);
 
 #endif // CANDLES_H_
