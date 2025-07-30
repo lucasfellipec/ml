@@ -10,7 +10,7 @@ wheels/
 .venv
 
 # CSV
-csv/
+times_and_trades_bases/
 
 # Logs
 tmp/

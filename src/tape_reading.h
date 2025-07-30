@@ -5,7 +5,7 @@ typedef struct {
     float price;
     float buy_volume;
     float sell_volume;
-    char agg;
+    char aggression;
 } Tape_Reading;
 
 #endif // TAPE_READING_H_

@@ -14,6 +14,26 @@ struct Times_And_Trades {
     size_t size;
 };
 
+float get_times_and_trades_price(Times_And_Trades *times_and_trades, int pos) {
+    return times_and_trades[pos].price;
+}
+
+float get_times_and_trades_volume(Times_And_Trades *times_and_trades, int pos) {
+    return times_and_trades[pos].volume;
+}
+
+float get_times_and_trades_aggression(Times_And_Trades *times_and_trades, int pos) {
+    return times_and_trades[pos].agg;
+}
+
+Datetime get_times_and_trades_datetime(Times_And_Trades *times_and_trades, int pos) {
+    return times_and_trades[pos].datetime;
+}
+
+size_t __get_times_and_trades_size(Times_And_Trades *times_and_trades) {
+    return times_and_trades->size;
+}
+
 Times_And_Trades *read_times_and_trades(const char *filename) {
     FILE *file = fopen(filename, "r");
 
@@ -100,26 +120,6 @@ Times_And_Trades *read_times_and_trades(const char *filename) {
     times_and_trades->size = rows;
 
     return times_and_trades;
-}
-
-float get_times_and_trades_price(Times_And_Trades *times_and_trades, int pos) {
-    return times_and_trades[pos].price;
-}
-
-float get_times_and_trades_volume(Times_And_Trades *times_and_trades, int pos) {
-    return times_and_trades[pos].volume;
-}
-
-float get_times_and_trades_agg(Times_And_Trades *times_and_trades, int pos) {
-    return times_and_trades[pos].agg;
-}
-
-Datetime get_times_and_trades_datetime(Times_And_Trades *times_and_trades, int pos) {
-    return times_and_trades[pos].datetime;
-}
-
-size_t __get_times_and_trades_size(Times_And_Trades *times_and_trades) {
-    return times_and_trades->size;
 }
 
 void __print_times_and_trades(Times_And_Trades *times_and_trades) {

@@ -13,6 +13,8 @@ typedef struct {
     float entry_price;
     float take_profit;
     float stop_loss;
+    float take_profit_pts;
+    float stop_loss_pts;
     char op;
     char op_result[3];
     size_t size;
