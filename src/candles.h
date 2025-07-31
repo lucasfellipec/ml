@@ -27,6 +27,7 @@ float get_daily_high_up_to_current_candle(Candle *candles, int pos);
 Candle_Color get_color(Candle *candles, int pos);
 float get_simple_moving_average(Candle *candles, int pos);
 float get_exponential_moving_average(Candle *candles, int pos);
+float get_volume_weighted_average_price(Candle *candles, int pos);
 Tape_Reading *get_price_volumes(Candle *candles, int pos);
 float get_total_buy_aggression_volume(Candle *candles, int pos);
 float get_total_sell_aggression_volume(Candle *candles, int pos);

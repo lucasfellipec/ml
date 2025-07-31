@@ -27,6 +27,7 @@ struct Candle {
     float daily_high_until_current_candle;
     float simple_moving_average;
     float exponential_moving_average;
+    float volume_weighted_average_price;
     Candle_Color color;
     size_t size;
     Candle_Times_And_Trades *candle_times_and_trades;
@@ -392,6 +393,18 @@ Candle *generate_candles(Times_And_Trades *times_and_trades, int timeframe, floa
         candles[k].delta_std = sqrt(variance);
     }
 
+    float price_x_volume_sum = 0;
+    float volume_sum = 0;
+
+    for (int k = 0; k < j; k++) {
+        float typical_price = (candles[k].high + candles[k].low + candles[k].close) / 3;
+
+        price_x_volume_sum += typical_price * (candles[k].total_buy_aggression_volume + candles[k].total_sell_aggression_volume);
+        volume_sum += (candles[k].total_buy_aggression_volume + candles[k].total_sell_aggression_volume);
+
+        candles[k].volume_weighted_average_price = price_x_volume_sum / volume_sum;
+    }
+
     for (int k = 0; k < j; k++) {
         float sum_buy_aggression = 0;
         float sum_sell_aggression = 0;
@@ -446,20 +459,20 @@ Candle *generate_candles(Times_And_Trades *times_and_trades, int timeframe, floa
 }
 
 void __print_header(FILE *filename) {
-    fprintf(filename, "datetime\topen\thigh\tlow\tclose\tdaily_high_until_current_candle\tdaily_low_until_current_candle\tsma\tema\ttotal_buy_aggression_volume\ttotal_sell_aggression_volume\tdelta_aggression\tdelta_average\tdelta_std\tbuy_volume_average\tsell_volume_average\tdisplacement\timpact\timpact_average\texpected_movement\treal_movement\tbuy_aggression_per_displacement\tsell_aggression_per_displacement\tdelta_aggression_per_displacement\tbuy_mad2\tsell_mad2\tdelta_mad2\n");
+    fprintf(filename, "DATETIME\tOPEN\tHIGH\tLOW\tCLOSE\tDAILY_HIGH_UNTIL_CURRENT_CANDLE\tDAILY_LOW_UNTIL_CURRENT_CANDLE\tSMA\tEMA\tVOLUME_WEIGHTED_AVERAGE_PRICE\tTOTAL_BUY_AGGRESSION_VOLUME\tTOTAL_SELL_AGGRESSION_VOLUME\tDELTA_AGGRESSION\tDELTA_AVERAGE\tDELTA_STD\tBUY_VOLUME_AVERAGE\tSELL_VOLUME_AVERAGE\tDISPLACEMENT\tIMPACT\tIMPACT_AVERAGE\tEXPECTED_MOVEMENT\tREAL_MOVEMENT\tBUY_AGGRESSION_PER_DISPLACEMENT\tSELL_AGGRESSION_PER_DISPLACEMENT\tDELTA_AGGRESSION_PER_DISPLACEMENT\tBUY_MAD2\tSELL_MAD2\tDELTA_MAD2\n");
 }
 
 void __print_candles(Candle *candles, char *filename) {
     FILE *out = fopen(filename, "w");
 
     if (!out) {
-        perror("Failed to open file\n");
+        fprintf(stderr, "Failed to open file\n");
         return;
     }
 
     __print_header(out);
     for (size_t i = 0; i < candles->size; i++) {
-        fprintf(out, "%02d/%02d/%02d %02d:%02d:%02d\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%.4f\t%.4f\t%.4f\n",
+        fprintf(out, "%02d/%02d/%02d %02d:%02d:%02d\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%.1f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%.4f\t%.4f\t%.4f\n",
             candles[i].datetime.year,
             candles[i].datetime.month,
             candles[i].datetime.day,
@@ -474,6 +487,7 @@ void __print_candles(Candle *candles, char *filename) {
             candles[i].daily_low_until_current_candle,
             candles[i].simple_moving_average,
             candles[i].exponential_moving_average,
+            candles[i].volume_weighted_average_price,
             candles[i].total_buy_aggression_volume,
             candles[i].total_sell_aggression_volume,
             candles[i].delta_aggression,
