@@ -9,13 +9,10 @@
 #define SIMPLE_MOVING_AVERAGE_PERIOD 20
 #define EXPONENTIAL_MOVING_AVERAGE_PERIOD 9
 
-const char *files[] = {
-    "times_and_trades_bases/2025.07 inc/TT_NEG_WDO_2025_07_22 inc.txt",
-    "times_and_trades_bases/2025.07 inc/TT_NEG_WDO_2025_07_23 inc.txt"
-};
+// const char *files[] = {};
 
-int main() {
-    size_t files_size = sizeof(files) / sizeof(files[0]);
+int main(int argc, char **argv) {
+    // size_t files_size = sizeof(files) / sizeof(files[0]);
 
     float last_ema = 0;
     float *last_closes = malloc(SIMPLE_MOVING_AVERAGE_PERIOD * sizeof(float));
@@ -27,22 +24,20 @@ int main() {
 
     int last_close_count = 0;
 
-    for (size_t i = 0; i < files_size; i++) {
-        const char *filename = files[i];
+    const char *filename = argv[1];
 
-        Times_And_Trades *times_and_trades = read_times_and_trades(filename);
-        Candle *candles = generate_candles(times_and_trades, TIMEFRAME, &last_ema, &last_closes, &last_close_count, SIMPLE_MOVING_AVERAGE_PERIOD, EXPONENTIAL_MOVING_AVERAGE_PERIOD);
+    Times_And_Trades *times_and_trades = read_times_and_trades(filename);
+    Candle *candles = generate_candles(times_and_trades, TIMEFRAME, &last_ema, &last_closes, &last_close_count, SIMPLE_MOVING_AVERAGE_PERIOD, EXPONENTIAL_MOVING_AVERAGE_PERIOD);
 
-        char buffer[512] = {0};
-        strcat(buffer, filename);
-        char *out = ".candles";
-        strcat(buffer, out);
+    char buffer[512] = {0};
+    strcat(buffer, filename);
+    char *out = ".candles";
+    strcat(buffer, out);
 
-        __print_candles(candles, buffer);
+    __print_candles(candles, buffer);
 
-        free(times_and_trades);
-        __free_candles(candles);
-    }
+    free(times_and_trades);
+    __free_candles(candles);
 
     free(last_closes);
     return 0;
